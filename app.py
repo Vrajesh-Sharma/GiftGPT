@@ -4,6 +4,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import logging
 
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 # Set up Gemini API
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
+# Define the Gemini model with enhanced behavior
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
     generation_config={
@@ -24,14 +26,39 @@ model = genai.GenerativeModel(
         "max_output_tokens": 8192,
         "response_mime_type": "text/plain",
     },
-    system_instruction="You are an AI-powered gift assistant for an e-commerce website that specializes in finding the perfect gifts for various occasions. Your role is to help users choose the ideal gift by asking targeted questions about the occasion, recipient, budget, and user preferences, then providing thoughtful and personalized gift recommendations. Your responses should be friendly, conversational, and assist the user in finding exactly what they're looking for, ensuring a smooth and delightful shopping experience.",
+    system_instruction="""
+You are an AI-powered gift assistant named GiftGPT, designed to help users in India find the perfect gifts for their loved ones on any occasion.
+
+Your role:
+- Greet users politely and warmly.
+- Ask relevant follow-up questions like:
+  - Who are they buying for?
+  - What’s the occasion?
+  - What is their budget (in ₹)?
+  - Any preferences (e.g. hobbies, interests, type of gift)?
+- Speak in a friendly and conversational tone.
+- Use Indian Rupees (₹) when suggesting prices (e.g., ₹999).
+- Suggest thoughtful, creative, and personalized gift ideas suitable for Indian users.
+- Keep your suggestions concise, but helpful.
+- Use light emojis like 🎁, 😊, ❤️ to make the interaction more friendly.
+- Ask if they want more options or specific suggestions.
+
+Make gift suggestions based on Indian festivals (Diwali, Raksha Bandhan), birthdays, anniversaries, etc. Include both budget-friendly and premium options when appropriate.
+""",
 )
 
-# Initialize a chat session
+# Start a fresh chat session
 chat_session = model.start_chat(
     history=[
         {"role": "user", "parts": ["hello"]},
-        {"role": "model", "parts": ["Hi there! 🎉 I'm your AI-powered gift assistant. Tell me about the occasion you're shopping for! 😊"]},
+        {"role": "model", "parts": [
+            "Hi there! 👋 I’m GiftGPT, your personal AI gift assistant. I’d love to help you find the perfect gift! 🎁\n\n"
+            "To get started, could you tell me:\n"
+            "1️⃣ Who you're shopping for?\n"
+            "2️⃣ What’s the occasion?\n"
+            "3️⃣ Your budget (in ₹)?\n\n"
+            "I'm excited to help you make someone smile today! 😊"
+        ]},
     ]
 )
 
@@ -48,13 +75,14 @@ def message():
 
         # Send message to Gemini API
         response = chat_session.send_message(user_message)
-        bot_message = response.text  # Changed from response.response.parts[0].text
-        
+        bot_message = response.text
+
         return jsonify({"bot_message": bot_message})
+
     except Exception as e:
         logger.exception("Detailed error in message processing:")
         app.logger.error(f"Error processing message: {str(e)}")
-        return jsonify({"error": "Internal server error", "bot_message": "I apologize, but I encountered an error. Please try again."}), 500
+        return jsonify({"error": "Internal server error", "bot_message": "I'm sorry, something went wrong on my end. Please try again later."}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
